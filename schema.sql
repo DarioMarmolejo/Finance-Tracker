@@ -1,3 +1,9 @@
+-- 1. LIMPIEZA: Borramos todo para empezar de cero
+DROP TABLE IF EXISTS transacciones;
+DROP TABLE IF EXISTS deudas;
+DROP TABLE IF EXISTS cuentas;
+DROP TABLE IF EXISTS categorias;
+
 -- 1. Categorías: Clasificación (Personal, Negocios, Deudas, Ahorros)
 CREATE TABLE IF NOT EXISTS categorias (
     id SERIAL PRIMARY KEY,
@@ -68,15 +74,37 @@ FOR EACH ROW EXECUTE FUNCTION actualizar_saldo_cuenta();
 CREATE OR REPLACE FUNCTION actualizar_saldo_deuda()
 RETURNS TRIGGER AS $$
 BEGIN
+    -- 1. Si la transacción está ligada a una deuda y es un EGRESO (pago)
     IF (NEW.deuda_id IS NOT NULL AND NEW.tipo_movimiento = 'EGRESO') THEN
-        UPDATE deudas SET saldo_pendiente = saldo_pendiente - NEW.monto
+        
+        -- Restamos el pago del saldo pendiente
+        UPDATE deudas 
+        SET saldo_pendiente = saldo_pendiente - NEW.monto
         WHERE id = NEW.deuda_id;
+
+        -- 2. Implementación de tu snippet: Verificamos si ya se liquidó
+        -- Usamos el registro actualizado de la tabla deudas
+        IF (SELECT saldo_pendiente FROM deudas WHERE id = NEW.deuda_id) <= 0 THEN
+            UPDATE deudas 
+            SET estado = 'PAGADA', 
+                saldo_pendiente = 0 -- Forzamos a 0 por si hubo un pago mayor al saldo
+            WHERE id = NEW.deuda_id;
+        END IF;
+        
     END IF;
+    
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
-
 -- Trigger para deudas
 CREATE TRIGGER trg_actualizar_saldo_deuda
 AFTER INSERT ON transacciones
 FOR EACH ROW EXECUTE FUNCTION actualizar_saldo_deuda();
+
+--La Vista de "Bola de Nieve"
+--Esta te diría siempre qué deuda atacar primero:
+CREATE OR REPLACE VIEW vista_bola_de_nieve AS
+SELECT nombre_acreedor, saldo_pendiente, pago_minimo
+FROM deudas
+WHERE estado = 'ACTIVA'
+ORDER BY saldo_pendiente ASC; -- La deuda más pequeña siempre arriba
