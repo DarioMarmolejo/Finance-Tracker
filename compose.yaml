@@ -13,10 +13,7 @@ services:
     ports:
       - "5432:5432"
     volumes:
-      # Mapeo local para persistencia
-      - ./postgres_data:/var/lib/postgresql/data
-      # (Opcional) Script inicial
-      # - ./init-scripts:/docker-entrypoint-initdb.d
+      - pg_data:/var/lib/postgresql/data
 
   n8n:
     image: n8nio/n8n:latest
@@ -37,6 +34,10 @@ services:
       - DB_POSTGRESDB_USER=${DB_USER}
       - DB_POSTGRESDB_PASSWORD=${DB_PASSWORD}
     volumes:
-      - ./n8n_data:/home/node/.n8n
+      - n8n_data:/home/node/.n8n
     depends_on:
       - postgres
+
+volumes:
+  pg_data:
+  n8n_data:
