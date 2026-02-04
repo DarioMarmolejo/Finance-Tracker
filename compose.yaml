@@ -37,7 +37,12 @@ services:
       - n8n_data:/home/node/.n8n
     depends_on:
       - postgres
-
+  cli:
+    build: ./cli           # Dice: "Usa el Dockerfile que está en esta carpeta"
+    image: gasto-cli
+    container_name: registrador_gastos
+    environment:
+      - N8N_HOST=n8n_automation
 volumes:
   pg_data:
   n8n_data:
