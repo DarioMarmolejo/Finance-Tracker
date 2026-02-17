@@ -1,0 +1,186 @@
+{
+  "name": "WebHook Insertar transacciones",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "gasto",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "bb9361d0-d4c5-4b5b-9364-a706c70bfb5a",
+      "name": "Webhook",
+      "webhookId": "f3988bdc-bf50-418a-9f4f-968a980f246c"
+    },
+    {
+      "parameters": {
+        "schema": {
+          "__rl": true,
+          "mode": "list",
+          "value": "public"
+        },
+        "table": {
+          "__rl": true,
+          "value": "transacciones",
+          "mode": "list",
+          "cachedResultName": "transacciones"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "es_deducible": false,
+            "monto": "={{ $json.body.monto }}",
+            "tipo_movimiento": "={{ $json.body.tipo }}",
+            "fecha_transaccion": "2026-02-03T00:42:59",
+            "cuenta_id": "={{ $json.body.cuenta_id }}",
+            "categoria_id": "={{ $json.body.categoria_id }}",
+            "descripcion": "={{ $json.body.desc }}",
+            "id": 0,
+            "deuda_id": 0
+          },
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "monto",
+              "displayName": "monto",
+              "required": true,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "tipo_movimiento",
+              "displayName": "tipo_movimiento",
+              "required": true,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "fecha_transaccion",
+              "displayName": "fecha_transaccion",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "dateTime",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "descripcion",
+              "displayName": "descripcion",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "categoria_id",
+              "displayName": "categoria_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "cuenta_id",
+              "displayName": "cuenta_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "deuda_id",
+              "displayName": "deuda_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "es_deducible",
+              "displayName": "es_deducible",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "boolean",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        208,
+        0
+      ],
+      "id": "78190270-1782-4c18-b0e9-75cfa8dbddf5",
+      "name": "Insert rows in a table",
+      "credentials": {
+        "postgres": {
+          "id": "X84LM3XqlqxiQ7UI",
+          "name": "Postgres account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Insert rows in a table",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Insert rows in a table": {
+      "main": [
+        []
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": false
+  },
+  "versionId": "515f34a5-648c-4da6-b411-35dbe7df29c0",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "a38ab7b46ded31c5d81cf2505f533f4dbb500f893a510ee3a841bde374a3e993"
+  },
+  "id": "qvYMgYPNGcVCO2USnelWP",
+  "tags": []
+}

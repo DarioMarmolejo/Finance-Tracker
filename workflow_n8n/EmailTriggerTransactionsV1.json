@@ -1,0 +1,257 @@
+{
+  "name": "Email Trigger transactions",
+  "nodes": [
+    {
+      "parameters": {
+        "format": "resolved",
+        "dataPropertyAttachmentsPrefixName": "email",
+        "options": {
+          "customEmailConfig": "[\"UNSEEN\"]"
+        }
+      },
+      "type": "n8n-nodes-base.emailReadImap",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "5069958f-b8bf-4687-91ce-e40a30cef82c",
+      "name": "Email Trigger (IMAP)",
+      "credentials": {
+        "imap": {
+          "id": "sue8K0ZHbBjpNSLx",
+          "name": "IMAP account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Obtenemos el cuerpo del correo (texto plano) y el asunto\nconst cuerpo = item.json.text || \"\";\nconst asunto = item.json.subject || \"Gasto sin asunto\";\n\n// 1. Buscamos el monto usando Expresiones Regulares (Regex)\n// Busca patrones como: \"Total: 500\", \"Monto: $500.00\", \"500 MXN\"\n// La regex captura números decimales o enteros\nconst regexMonto = /(?:Total|Monto|Importe)[:\\s$]*([\\d,]+(?:\\.\\d{1,2})?)/i;\nconst match = cuerpo.match(regexMonto);\n\nlet monto = 0.0;\nlet descripcion = asunto;\n\nif (match && match[1]) {\n  // Limpiamos comas (ej: 1,200.50 -> 1200.50)\n  monto = parseFloat(match[1].replace(',', ''));\n  descripcion += \" (Auto-detectado)\";\n} else {\n  // Si no encuentra monto, ponemos 0 para revisarlo manual despues\n  descripcion += \" [REVISAR: No se halló monto]\";\n}\n\n// LÓGICA DE CLASIFICACIÓN\n// Asumimos IDs de tu BD: 1=Efectivo, 2=Nu, 3=BBVA\nlet cuenta_id = 1;       // Default (Efectivo)\nlet categoria_id = 1;    // Default (Gastos Varios)\nlet deuda_id = null;     // Por defecto no es pago de deuda\n\n// Normalizamos a minúsculas para buscar fácil\nconst textoBusqueda = (asunto + \" \" + cuerpo).toLowerCase();\n\nif (textoBusqueda.includes(\"nu\")) {\n    cuenta_id = 2; // ID de tu tarjeta Nu\n    descripcion = \"Gasto Tarjeta Nu: \" + descripcion;\n    \n    // Ejemplo: Si dice \"estado de cuenta\", quizás es un pago de deuda\n    if (textoBusqueda.includes(\"estado de cuenta\")) {\n       categoria_id = 10; // ID para \"Pago de Deudas\"\n       deuda_id = 5;      // ID de tu deuda Nu específica\n    }\n\n} else if (textoBusqueda.includes(\"bbva\")) {\n    cuenta_id = 3; // ID de tu cuenta BBVA\n    \n} else if (textoBusqueda.includes(\"cfe\") || textoBusqueda.includes(\"internet\")) {\n    categoria_id = 3; // ID Servicios\n}\n\nreturn {\n  json: {\n    monto: monto,\n    descripcion: descripcion,\n    tipo: 'EGRESO',\n    cuenta_id: cuenta_id,\n    categoria_id: categoria_id,\n    deuda_id: deuda_id // <--- Nuevo campo para enviar a Postgres\n  }\n};\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        208,
+        0
+      ],
+      "id": "591a0040-4bbe-4b8d-a3bf-26220f15ac32",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "schema": {
+          "__rl": true,
+          "mode": "list",
+          "value": "public"
+        },
+        "table": {
+          "__rl": true,
+          "value": "transacciones",
+          "mode": "list",
+          "cachedResultName": "transacciones"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "es_deducible": false,
+            "monto": "={{ $json.monto }}",
+            "categoria_id": "={{ $json.categoria_id }}",
+            "cuenta_id": "={{ $json.cuenta_id }}",
+            "tipo_movimiento": "={{ $json.tipo }}",
+            "descripcion": "={{ $json.descripcion }}",
+            "fecha_transaccion": "2026-02-04T14:36:16",
+            "deuda_id": "={{ $json.deuda_id }}"
+          },
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "monto",
+              "displayName": "monto",
+              "required": true,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "tipo_movimiento",
+              "displayName": "tipo_movimiento",
+              "required": true,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "fecha_transaccion",
+              "displayName": "fecha_transaccion",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "dateTime",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "descripcion",
+              "displayName": "descripcion",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "categoria_id",
+              "displayName": "categoria_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "cuenta_id",
+              "displayName": "cuenta_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "deuda_id",
+              "displayName": "deuda_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "es_deducible",
+              "displayName": "es_deducible",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "boolean",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        608,
+        -96
+      ],
+      "id": "65ae634b-afd5-4610-b28a-c2db5bd3eec1",
+      "name": "Insert rows in a table",
+      "credentials": {
+        "postgres": {
+          "id": "X84LM3XqlqxiQ7UI",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "338e4aa4-70f8-40bc-a5e6-56029e83f02b",
+              "leftValue": "={{ $json.monto }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {
+          "ignoreCase": false
+        }
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        416,
+        0
+      ],
+      "id": "b3179d45-f3df-4a1b-a2bc-05f87c65bc6b",
+      "name": "If"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Email Trigger (IMAP)": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Insert rows in a table",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": false
+  },
+  "versionId": "5a489a40-3a13-47d5-bdd4-69eef8415846",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "a38ab7b46ded31c5d81cf2505f533f4dbb500f893a510ee3a841bde374a3e993"
+  },
+  "id": "VKQ5_76K42oyvEuwmnQlJ",
+  "tags": []
+}

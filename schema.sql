@@ -1,10 +1,13 @@
--- 1. LIMPIEZA: Borramos todo para empezar de cero
+-- 1. LIMPIEZA: El orden importa (borramos de lo más específico a lo más general)
+DROP VIEW IF EXISTS vista_bola_de_nieve;
 DROP TABLE IF EXISTS transacciones;
 DROP TABLE IF EXISTS deudas;
 DROP TABLE IF EXISTS cuentas;
 DROP TABLE IF EXISTS categorias;
+DROP TABLE IF EXISTS cat_tipo_cuenta; -- Agregado para limpieza total
+DROP TABLE IF EXISTS cat_monedas;      -- Agregado para limpieza total
 
--- 1. Categorías: Clasificación (Personal, Negocios, Deudas, Ahorros)
+-- 1. Categorías
 CREATE TABLE IF NOT EXISTS categorias (
     id SERIAL PRIMARY KEY,
     nombre VARCHAR(50) NOT NULL,
@@ -12,28 +15,49 @@ CREATE TABLE IF NOT EXISTS categorias (
     descripcion TEXT
 );
 
--- 2. Cuentas: Donde vive el dinero (Inbursa, Efectivo, etc.)
+-- 2. Catálogo de tipos de cuenta (DEBE crearse antes que 'cuentas')
+CREATE TABLE IF NOT EXISTS cat_tipo_cuenta (
+    id SERIAL PRIMARY KEY,
+    nombre VARCHAR(20) NOT NULL UNIQUE
+);
+
+INSERT INTO cat_tipo_cuenta (nombre) VALUES 
+('DEBITO'), ('CREDITO'), ('PRESTAMO'), ('EFECTIVO');
+
+-- 3. Catálogo de monedas (DEBE crearse antes que 'cuentas')
+CREATE TABLE IF NOT EXISTS cat_monedas (
+    codigo VARCHAR(3) PRIMARY KEY,
+    nombre VARCHAR(50) NOT NULL,
+    simbolo VARCHAR(5) NOT NULL
+);
+
+INSERT INTO cat_monedas (codigo, nombre, simbolo) VALUES 
+('MXN', 'Peso Mexicano', '$'),
+('EUR', 'Euro', '€'),
+('USD', 'Dólar Estadounidense', '$');
+
+-- 4. Cuentas
 CREATE TABLE IF NOT EXISTS cuentas (
     id SERIAL PRIMARY KEY,
     nombre VARCHAR(50) NOT NULL,
-    tipo VARCHAR(20) DEFAULT 'DEBITO',
-    moneda VARCHAR(3) DEFAULT 'MXN',
+    tipo_id INT REFERENCES cat_tipo_cuenta(id),
+    moneda_codigo VARCHAR(3) REFERENCES cat_monedas(codigo) DEFAULT 'MXN',
     saldo_actual DECIMAL(12, 2) DEFAULT 0.00
 );
 
--- 3. Deudas: Optimizada para el método Bola de Nieve
+-- 5. Deudas
 CREATE TABLE IF NOT EXISTS deudas (
     id SERIAL PRIMARY KEY,
     nombre_acreedor VARCHAR(100) NOT NULL,
-    monto_total DECIMAL(12, 2) NOT NULL,      -- Monto inicial
-    saldo_pendiente DECIMAL(12, 2) NOT NULL,  -- Lo que falta por pagar
+    monto_total DECIMAL(12, 2) NOT NULL,
+    saldo_pendiente DECIMAL(12, 2) NOT NULL,
     tasa_interes DECIMAL(5, 2),
     pago_minimo DECIMAL(10, 2),
     dia_vencimiento INT,
     estado VARCHAR(20) DEFAULT 'ACTIVA' CHECK (estado IN ('ACTIVA', 'PAGADA'))
 );
 
--- 4. Transacciones: El registro de movimientos diario
+-- 6. Transacciones
 CREATE TABLE IF NOT EXISTS transacciones (
     id SERIAL PRIMARY KEY,
     monto DECIMAL(10, 2) NOT NULL CHECK (monto > 0),
